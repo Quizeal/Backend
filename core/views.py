@@ -37,11 +37,27 @@ class CreateQuiz(APIView):
 
                 if optionSerializer.is_valid():
                     optionInstance = optionSerializer.save()
-                    print(optionInstance)
+                    #print(optionInstance)
                 
                 else:
                     return Response(optionSerializer.errors)
 
-
-        return JsonResponse("Succesfully completed request!", safe=False)
+        return JsonResponse({'data':"Succesfully completed request!"})
         
+
+class SubmitQuiz(APIView):
+
+    def post(self,request,*args,**kwargs):
+        
+
+        for response in request.data['answers']:
+            quizAnsweredSerializer = serializers.QuizAnsweredSerializer(data = response)
+            
+            if quizAnsweredSerializer.is_valid():
+                    quizAnsweredInstance = quizAnsweredSerializer.save()
+                    print(quizAnsweredInstance)
+                
+            else:
+                return Response(quizAnsweredSerializer.errors)
+
+        return JsonResponse({'data':"Succesfully completed request!"})
