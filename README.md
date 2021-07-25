@@ -13,6 +13,8 @@ The ultimate Quiz taking platform for the present times.
 - `conda create -n djangoenv django`
 - `conda activate djangoenv`
 - `pip install djangorestframework`
-  Open project repo in the venv created and run -
+
+#### Open project repo in the venv created and run -
+
 - `python manage.py migrate`
 - `python manage.py runserv`
