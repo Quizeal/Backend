@@ -1,4 +1,5 @@
 from django.db import models
+from django.db.models.fields import related
 
 # Questions - id(PK), QuestionName(varchar), TypeID(FK), QuizID(FK), IsActive(bool)
 
@@ -10,18 +11,6 @@ from django.db import models
 
 # QuizMarks - id(PK), QuizDetailsID(FK), userID(FK), marks(int), isActive(bool)
 
-class Questions(models.Model):
-
-    QUESTION_CHOICES = [
-        (1, 'single_ans'),
-        (2, 'multiple_ans')
-    ]
-
-    question_name = models.TextField()
-    quiz_id = models.IntegerField(null = True)
-    question_type = models.IntegerField(choices= QUESTION_CHOICES, default=1)
-    question_marks = models.IntegerField(null = True)
-
 class QuizDetails(models.Model):
     quiz_name = models.TextField()
     #user_id = 
@@ -29,16 +18,29 @@ class QuizDetails(models.Model):
     duration = models.DurationField()
     date = models.DateField()
 
+class Questions(models.Model):
+
+    QUESTION_CHOICES = [
+        (1, 'single_ans'),
+        (2, 'multiple_ans')
+    ]
+
+    #question_id = models.IntegerField(null = True)
+    question_name = models.TextField()
+    quiz_details = models.ForeignKey(QuizDetails, related_name = 'questions', on_delete=models.CASCADE,null=True)
+    question_type = models.IntegerField(choices= QUESTION_CHOICES, default=1)
+    question_marks = models.IntegerField(null = True)
+
 class QuizOptions(models.Model):
-    question_id = models.IntegerField()
+    question_id = models.ForeignKey(Questions, related_name = 'options', on_delete=models.CASCADE,null=True)
     option_name = models.TextField()
     is_correct = models.BooleanField()
     is_active = models.BooleanField(default=True)
 
 class QuizAnswered(models.Model):
     #user_id = 
-    question_id = models.IntegerField()
-    answer = models.TextField()
+    question_id = models.ForeignKey(Questions, related_name = 'answers', on_delete=models.CASCADE,null=True)
+    answer_name = models.TextField()
     is_active = models.BooleanField(default=True)
 
 class QuizMarks(models.Model):
