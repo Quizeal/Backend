@@ -17,4 +17,4 @@ The ultimate Quiz taking platform for the present times.
 #### Open project repo in the venv created and run -
 
 - `python manage.py migrate`
-- `python manage.py runserv`
+- `python manage.py runserver`
