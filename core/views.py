@@ -140,18 +140,17 @@ class GetQuiz(APIView):
         intz = pytz.timezone('Asia/Kolkata')
         quiz_details_qs = QuizDetails.objects.prefetch_related('questions').get(id = quiz_id)
         quiz_datetime = datetime.combine(quiz_details_qs.date, quiz_details_qs.start_time)
-        quiz_datetime = quiz_datetime.replace(tzinfo = intz)
+        quiz_datetime = intz.localize(quiz_datetime)
         quiz_end_datetime = quiz_datetime + quiz_details_qs.duration
-        quiz_end_datetime = quiz_end_datetime.replace(tzinfo = intz)
 
         print(quiz_datetime)
         print(datetime.now(intz))
         print(quiz_end_datetime)
         
-        if quiz_end_datetime > datetime.now(intz):
+        if quiz_end_datetime < datetime.now(intz):
             return JsonResponse({"msg" : "Quiz has already ended!"})
 
-        if quiz_datetime < datetime.now(intz):
+        if quiz_datetime > datetime.now(intz):
             return JsonResponse({"msg" : "Quiz not started yet!"})
 
         
