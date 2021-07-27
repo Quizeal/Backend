@@ -135,10 +135,10 @@ class SubmitQuiz(APIView):
 
 class GetQuiz(APIView):
 
-    def get(self,request,*args,**kwargs):
+    def get(self,request,quiz_id):
 
         intz = pytz.timezone('Asia/Kolkata')
-        quiz_details_qs = QuizDetails.objects.prefetch_related('questions').get(id = request.data["quiz_id"])
+        quiz_details_qs = QuizDetails.objects.prefetch_related('questions').get(id = quiz_id)
         quiz_datetime = datetime.combine(quiz_details_qs.date, quiz_details_qs.start_time)
         quiz_datetime = quiz_datetime.replace(tzinfo = intz)
         quiz_end_datetime = quiz_datetime + quiz_details_qs.duration
@@ -160,7 +160,7 @@ class GetQuiz(APIView):
         questions_list = quiz_details_qs.questions
 
         print(questions_list)
-        questions_qs = Questions.objects.filter(quiz_details = request.data["quiz_id"]).prefetch_related('options')
+        questions_qs = Questions.objects.filter(quiz_details = quiz_id).prefetch_related('options')
 
 
         for question in questions_qs:
