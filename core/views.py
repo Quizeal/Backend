@@ -1,4 +1,4 @@
-from core.models import QuizDetails, QuizMarks, QuizOptions, Questions
+from core.models import QuizAnswered, QuizDetails, QuizMarks, QuizOptions, Questions
 from . import serializers
 from django.http import JsonResponse
 from django.forms.models import model_to_dict
@@ -79,6 +79,7 @@ class SubmitQuiz(APIView):
 
         for i in range(len(response)):
 
+            response[i]["quiz_id"] = quiz_id
             quizAnsweredSerializer = serializers.QuizAnsweredSerializer(data = response[i])
  
             if quizAnsweredSerializer.is_valid():
@@ -132,11 +133,11 @@ class GetQuiz(APIView):
         quiz_datetime = intz.localize(quiz_datetime)
         quiz_end_datetime = quiz_datetime + quiz_details_qs.duration
 
-        # if quiz_datetime > datetime.now(intz):
-        #     return JsonResponse({"msg" : "Quiz not started yet!"})
+        if quiz_datetime > datetime.now(intz):
+            return JsonResponse({"msg" : "Quiz not started yet!"})
         
-        # if quiz_end_datetime < datetime.now(intz):
-        #     return JsonResponse({"msg" : "Quiz has already ended!"})
+        if quiz_end_datetime < datetime.now(intz):
+            return JsonResponse({"msg" : "Quiz has already ended!"})
 
         quiz_details = model_to_dict(quiz_details_qs)
         quiz_details["questions"] = []
@@ -155,3 +156,61 @@ class GetQuiz(APIView):
                 del quiz_details["questions"][-1]["options"][-1]["is_active"]
 
         return JsonResponse(quiz_details)
+
+class ViewQuiz(APIView):
+
+    def get(self,request,quiz_id):
+
+        quiz_details_qs = QuizDetails.objects.prefetch_related('questions').get(id = quiz_id)
+        quiz_details = model_to_dict(quiz_details_qs)
+        quiz_details["questions"] = []
+        questions_qs = quiz_details_qs.questions.all().prefetch_related('options')
+
+
+        for question in questions_qs:
+            quiz_details["questions"].append(model_to_dict(question))
+
+            quiz_details["questions"][-1]["options"] = []
+            options = question.options.all()
+
+            for option in options:
+                quiz_details["questions"][-1]["options"].append(model_to_dict(option))
+                del quiz_details["questions"][-1]["options"][-1]["is_active"]
+
+        return JsonResponse(quiz_details)
+
+
+class QuizReport(APIView):
+
+    def get(self,request,quiz_id):   
+        
+        
+        marks_qs = QuizMarks.objects.get(quiz_id = quiz_id)
+
+        quiz_details_qs = QuizDetails.objects.prefetch_related('questions').get(id = quiz_id)
+        quiz_details = model_to_dict(quiz_details_qs)
+        quiz_details["questions"] = []
+        questions_qs = quiz_details_qs.questions.all().prefetch_related('options')
+        quiz_answered_qs = QuizAnswered.objects.filter(quiz_id = quiz_id)
+
+        print(quiz_answered_qs.values_list())
+
+        for question in questions_qs:
+            quiz_details["questions"].append(model_to_dict(question))
+
+            quiz_details["questions"][-1]["options"] = []
+            options = question.options.all()
+
+            for option in options:
+                quiz_details["questions"][-1]["options"].append(model_to_dict(option))
+
+                quiz_details["questions"][-1]["options"][-1]["is_marked"] = False
+
+                if quiz_answered_qs.filter(answer_name = option.option_name, question_id = question.id).exists():
+                    quiz_details["questions"][-1]["options"][-1]["is_marked"] = True
+
+                del quiz_details["questions"][-1]["options"][-1]["is_active"]
+
+
+        return JsonResponse(quiz_details)
+
