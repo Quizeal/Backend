@@ -1,5 +1,4 @@
-from core.models import QuizDetails, QuizOptions, Questions
-from django.shortcuts import render
+from core.models import QuizDetails, QuizMarks, QuizOptions, Questions
 from . import serializers
 from django.http import JsonResponse
 from django.forms.models import model_to_dict
@@ -7,48 +6,10 @@ from datetime import datetime
 from datetime import timedelta
 import pytz
 
-#third party imports
+
 from rest_framework.response import Response
 from rest_framework.views import APIView
-
-# class CreateQuiz(APIView):
-
-#     def post(self,request,*args,**kwargs):
-
-#         quizDetailsSerializer = serializers.QuizDetailsSerializer(data = request.data)
-      
-#         if quizDetailsSerializer.is_valid():
-#             quizInstance = quizDetailsSerializer.save()
-#             #return Response(quizDetailsSerializer.data)
-
-#         else:
-#             return Response(quizDetailsSerializer.errors)
-
-#         for question in request.data["questions"]:
-#             question['quiz_id'] = quizInstance.pk
-#             questionsSerializer = serializers.QuestionsSerializer(data = question) 
-                
-#             if questionsSerializer.is_valid():
-#                 questionInstance = questionsSerializer.save()
-
-#             else:
-#                 #print(questionsSerializer.quiz_id)
-#                 return Response(questionsSerializer.errors)
-
-#             for option in question["options"]:
-#                 option['question_id'] = questionInstance.pk
-#                 optionSerializer = serializers.QuizOptionsSerializer(data = option)
-
-#                 if optionSerializer.is_valid():
-#                     optionInstance = optionSerializer.save()
-#                     #print(optionInstance)
-                
-#                 else:
-#                     return Response(optionSerializer.errors)
-
-#         return Response(quizDetailsSerializer.data)
         
-
 
 class CreateQuiz(APIView):
 
@@ -65,12 +26,11 @@ class CreateQuiz(APIView):
                     if optionSerializer.is_valid():
                         optionInstance = optionSerializer.save()
                         option_list.append(optionInstance.pk)
-                        #print(optionInstance)
-                    
+
                     else:
                         return Response(optionSerializer.errors)
 
-            question['options'] = option_list
+            question["options"] = option_list
             questionsSerializer = serializers.QuestionsSerializer(data = question)
                 
             if questionsSerializer.is_valid():
@@ -80,6 +40,8 @@ class CreateQuiz(APIView):
             else:
                 #print(questionsSerializer.quiz_id)
                 return Response(questionsSerializer.errors)
+        
+            option_list.clear()
 
         request.data['questions'] = question_list
         quizDetailsSerializer = serializers.QuizDetailsSerializer(data = request.data)
@@ -96,42 +58,68 @@ class CreateQuiz(APIView):
 
 class SubmitQuiz(APIView):
 
-    def post(self,request,*args,**kwargs):
+    def post(self,request,quiz_id):
         
         intz = pytz.timezone('Asia/Kolkata')
 
-        question_id = request.data['answers'][0]['question_id']
-        question = Questions.objects.get(pk = question_id)
-
-        quiz_details_qs = QuizDetails.objects.get(pk = question.quiz_details.pk)
+        quiz_details_qs = QuizDetails.objects.get(pk = quiz_id)
 
         quiz_datetime = datetime.combine(quiz_details_qs.date, quiz_details_qs.start_time)
         quiz_datetime = intz.localize(quiz_datetime)
         quiz_end_datetime = quiz_datetime + quiz_details_qs.duration
         quiz_end_datetime += timedelta(minutes=6)
-        
-        print(quiz_datetime)
-        print(datetime.now(intz))
-        print(quiz_end_datetime)
 
-        if quiz_datetime > datetime.now(intz):
-            return JsonResponse({"msg":"Quiz has not yet started. Cannot submit now!"})
-        
-        if datetime.now(intz) > quiz_end_datetime:
-            return JsonResponse({"msg":"Quiz has ended. Cannot submit now!"})
 
-        for response in request.data['answers']:
+        questions_qs = quiz_details_qs.questions.all().prefetch_related('options') 
+        marks = 0
+        total_marks = 0
+        option_list = []
 
-            quizAnsweredSerializer = serializers.QuizAnsweredSerializer(data = response)
+        response = request.data['answers']
+
+        for i in range(len(response)):
+
+            quizAnsweredSerializer = serializers.QuizAnsweredSerializer(data = response[i])
  
             if quizAnsweredSerializer.is_valid():
                     quizAnsweredInstance = quizAnsweredSerializer.save()
                     #print(quizAnsweredInstance)
-                
+        
             else:
                 return Response(quizAnsweredSerializer.errors)
 
-        return Response(quizAnsweredSerializer.data)
+            option_list.append(response[i]["answer_name"])
+
+            if i==len(response)-1 or response[i]["question_id"] != response[i+1]["question_id"]:
+
+                question = questions_qs.get(pk=response[i]["question_id"])
+                # options_qs = QuizOptions.objects.filter(question_id_id = response[i]["question_id"],is_correct = True)
+
+                options_qs = question.options.filter(is_correct = True)
+
+                total_marks += question.question_marks           
+                correct_ans = True
+                
+                print(option_list)
+
+                if len(option_list) != len(options_qs):
+                    correct_ans = False
+
+                for option in option_list:
+                    if not options_qs.filter(option_name = option).exists():
+                        correct_ans = False
+                    
+                if correct_ans:
+                    marks += question.question_marks
+
+                option_list.clear()
+
+
+        quiz_marks = QuizMarks(marks = marks, total_marks = total_marks, quiz_id = quiz_details_qs)
+        quiz_marks.save()
+        
+
+        return JsonResponse({"msg" : "Quiz has been submitted successfully!", "marks" : str(marks) + "/"+ str(total_marks)})
 
 
 class GetQuiz(APIView):
@@ -144,35 +132,26 @@ class GetQuiz(APIView):
         quiz_datetime = intz.localize(quiz_datetime)
         quiz_end_datetime = quiz_datetime + quiz_details_qs.duration
 
-        print(quiz_datetime)
-        print(datetime.now(intz))
-        print(quiz_end_datetime)
-
-        if quiz_datetime > datetime.now(intz):
-            return JsonResponse({"msg" : "Quiz not started yet!"})
+        # if quiz_datetime > datetime.now(intz):
+        #     return JsonResponse({"msg" : "Quiz not started yet!"})
         
-        if quiz_end_datetime < datetime.now(intz):
-            return JsonResponse({"msg" : "Quiz has already ended!"})
+        # if quiz_end_datetime < datetime.now(intz):
+        #     return JsonResponse({"msg" : "Quiz has already ended!"})
 
         quiz_details = model_to_dict(quiz_details_qs)
         quiz_details["questions"] = []
-        questions_list = quiz_details_qs.questions
-
-        print(questions_list)
-        questions_qs = Questions.objects.filter(quiz_details = quiz_id).prefetch_related('options')
+        questions_qs = quiz_details_qs.questions.all().prefetch_related('options')
 
 
         for question in questions_qs:
             quiz_details["questions"].append(model_to_dict(question))
- 
-        for question in quiz_details["questions"]:
-            options_qs = QuizOptions.objects.only("option_name").filter(id = question['id'])
 
-            question["options"] = []
+            quiz_details["questions"][-1]["options"] = []
+            options = question.options.all()
 
-            for option in options_qs:
-                question["options"].append(model_to_dict(option))
-                del question["options"][-1]["is_correct"]
-                del question["options"][-1]["is_active"]
+            for option in options:
+                quiz_details["questions"][-1]["options"].append(model_to_dict(option))
+                del quiz_details["questions"][-1]["options"][-1]["is_correct"]
+                del quiz_details["questions"][-1]["options"][-1]["is_active"]
 
         return JsonResponse(quiz_details)

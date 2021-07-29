@@ -1,4 +1,6 @@
 from django.db import models
+from django.db.models.deletion import CASCADE
+from django.db.models.expressions import Case
 from django.db.models.fields import related
 
 # Questions - id(PK), QuestionName(varchar), TypeID(FK), QuizID(FK), IsActive(bool)
@@ -44,9 +46,14 @@ class QuizAnswered(models.Model):
     is_active = models.BooleanField(default=True)
 
 class QuizMarks(models.Model):
-    quiz_id = models.IntegerField()
+    quiz_id = models.ForeignKey(QuizDetails, on_delete=models.CASCADE)
     #user_id = 
     marks = models.IntegerField()
+    total_marks = models.IntegerField(default=0)
     is_active = models.BooleanField(default=True)
+
+    def __str__(self):
+
+        return str(self.marks)
 
 

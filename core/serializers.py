@@ -24,7 +24,7 @@ class QuizDetailsSerializer(serializers.ModelSerializer):
 
 class QuestionsSerializer(serializers.ModelSerializer):
 
-    #answers = serializers.PrimaryKeyRelatedField(many=True, queryset = models.QuizAnswered.objects.all(),allow_null = True)
+    #answers = serializers.PrimaryKeyRelatedField(many=True, queryset = models.QuizAnswered.objects.all())
     options = serializers.PrimaryKeyRelatedField(many=True, queryset = models.QuizOptions.objects.all())
     class Meta:
         model = models.Questions
