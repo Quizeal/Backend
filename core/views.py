@@ -263,9 +263,9 @@ class MyQuizes(APIView):
         for quiz in created_quiz_qs:
             my_quizes["created"].append(model_to_dict(quiz))
 
-        attempted_quiz_qs = QuizMarks.objects.filter(username = username)
+        attempted_quiz_qs = QuizMarks.objects.filter(username = username).select_related('quiz_id')
 
         for quiz in attempted_quiz_qs:
-            my_quizes["attempted"].append(model_to_dict(quiz))
+            my_quizes["attempted"].append(model_to_dict(quiz) | model_to_dict(quiz.quiz_id))
         
         return JsonResponse(my_quizes)
