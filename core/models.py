@@ -2,6 +2,7 @@ from django.db import models
 from django.db.models.deletion import CASCADE
 from django.db.models.expressions import Case
 from django.db.models.fields import related
+from django.contrib.auth.models import User
 
 # Questions - id(PK), QuestionName(varchar), TypeID(FK), QuizID(FK), IsActive(bool)
 
@@ -15,7 +16,7 @@ from django.db.models.fields import related
 
 class QuizDetails(models.Model):
     quiz_name = models.TextField()
-    #user_id = 
+    username = models.CharField(max_length=150,null = True)
     start_time = models.TimeField()
     duration = models.DurationField()
     date = models.DateField()
@@ -27,7 +28,6 @@ class Questions(models.Model):
         (2, 'multiple_ans')
     ]
 
-    #question_id = models.IntegerField(null = True)
     question_name = models.TextField()
     quiz_details = models.ForeignKey(QuizDetails, related_name = 'questions', on_delete=models.CASCADE,null=True)
     question_type = models.IntegerField(choices= QUESTION_CHOICES, default=1)
@@ -40,7 +40,7 @@ class QuizOptions(models.Model):
     is_active = models.BooleanField(default=True)
 
 class QuizAnswered(models.Model):
-    #user_id = 
+    username = models.CharField(max_length=150,null = True)
     question_id = models.ForeignKey(Questions, related_name = 'answers', on_delete=models.CASCADE,null=True)
     quiz_id = models.ForeignKey(QuizDetails, on_delete=models.CASCADE,null=True)
     answer_name = models.TextField()
@@ -48,13 +48,10 @@ class QuizAnswered(models.Model):
 
 class QuizMarks(models.Model):
     quiz_id = models.ForeignKey(QuizDetails, on_delete=models.CASCADE)
-    #user_id = 
+    username = models.CharField(max_length=150,null = True)
     marks = models.IntegerField()
     total_marks = models.IntegerField(default=0)
     is_active = models.BooleanField(default=True)
 
     def __str__(self):
-
         return str(self.marks)
-
-

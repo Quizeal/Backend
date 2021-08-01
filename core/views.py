@@ -59,7 +59,7 @@ class CreateQuiz(APIView):
 class SubmitQuiz(APIView):
 
     def post(self,request,quiz_id):
-        
+
         intz = pytz.timezone('Asia/Kolkata')
 
         quiz_details_qs = QuizDetails.objects.get(pk = quiz_id)
@@ -69,6 +69,11 @@ class SubmitQuiz(APIView):
         quiz_end_datetime = quiz_datetime + quiz_details_qs.duration
         quiz_end_datetime += timedelta(minutes=6)
 
+        print(quiz_end_datetime)
+        print(datetime.now(intz))
+
+        if quiz_end_datetime<datetime.now(intz):
+            return JsonResponse({"msg" : "Quiz has already ended"})
 
         questions_qs = quiz_details_qs.questions.all().prefetch_related('options') 
         marks = 0
@@ -80,10 +85,11 @@ class SubmitQuiz(APIView):
         for i in range(len(response)):
 
             response[i]["quiz_id"] = quiz_id
+            response[i]["username"] = request.data["username"]
             quizAnsweredSerializer = serializers.QuizAnsweredSerializer(data = response[i])
  
             if quizAnsweredSerializer.is_valid():
-                    quizAnsweredInstance = quizAnsweredSerializer.save()
+                    quizAnsweredSerializer.save()
                     #print(quizAnsweredInstance)
         
             else:
@@ -116,7 +122,7 @@ class SubmitQuiz(APIView):
                 option_list.clear()
 
 
-        quiz_marks = QuizMarks(marks = marks, total_marks = total_marks, quiz_id = quiz_details_qs)
+        quiz_marks = QuizMarks(marks = marks, total_marks = total_marks, quiz_id = quiz_details_qs, username = request.data["username"])
         quiz_marks.save()
         
 
@@ -184,14 +190,22 @@ class QuizReport(APIView):
 
     def get(self,request,quiz_id):   
         
-        
-        marks_qs = QuizMarks.objects.get(quiz_id = quiz_id)
+        marks_qs = QuizMarks.objects.filter(quiz_id = quiz_id)
 
         quiz_details_qs = QuizDetails.objects.prefetch_related('questions').get(id = quiz_id)
         quiz_details = model_to_dict(quiz_details_qs)
         quiz_details["questions"] = []
         questions_qs = quiz_details_qs.questions.all().prefetch_related('options')
         quiz_answered_qs = QuizAnswered.objects.filter(quiz_id = quiz_id)
+
+        intz = pytz.timezone('Asia/Kolkata')
+        quiz_datetime = datetime.combine(quiz_details_qs.date, quiz_details_qs.start_time)
+        quiz_datetime = intz.localize(quiz_datetime)
+        quiz_end_datetime = quiz_datetime + quiz_details_qs.duration
+        quiz_end_datetime += timedelta(minutes=6)
+
+        if quiz_end_datetime>datetime.now(intz):
+            return JsonResponse({"msg" : "Quiz has not yet ended"})
 
         print(quiz_answered_qs.values_list())
 
@@ -212,5 +226,46 @@ class QuizReport(APIView):
                 del quiz_details["questions"][-1]["options"][-1]["is_active"]
 
 
+        marks_list = []
+        
+        user_rank = 1
+
+        for marks in marks_qs:
+            marks_list.append(marks.marks)
+            if marks.username == request.data["username"]:
+                user_marks = marks.marks
+
+        marks_list.sort()
+
+        for marks in marks_list:
+            if marks!=user_marks:
+                user_rank+=1
+            else:
+                break
+
+        quiz_details["average"] = sum(marks_list)/len(marks_list)
+        quiz_details["total_students"] = len(marks_list)
+        quiz_details["topper_marks"] = marks_list[0]
+        quiz_details["user_marks"] = user_marks
+        quiz_details["user_rank"] = user_rank
+                  
         return JsonResponse(quiz_details)
 
+
+class MyQuizes(APIView):
+
+    def get(self,request,username):
+
+        my_quizes = {"created":[],"attempted":[]}
+
+        created_quiz_qs = QuizDetails.objects.filter(username = username)
+
+        for quiz in created_quiz_qs:
+            my_quizes["created"].append(model_to_dict(quiz))
+
+        attempted_quiz_qs = QuizMarks.objects.filter(username = username)
+
+        for quiz in attempted_quiz_qs:
+            my_quizes["attempted"].append(model_to_dict(quiz))
+        
+        return JsonResponse(my_quizes)
