@@ -237,7 +237,7 @@ class QuizReport(APIView):
             if marks.username == request.data["username"]:
                 user_marks = marks.marks
 
-        marks_list.sort()
+        marks_list.sort(reverse=True)
 
         for marks in marks_list:
             if marks!=user_marks:
@@ -268,6 +268,7 @@ class MyQuizes(APIView):
         attempted_quiz_qs = QuizMarks.objects.filter(username = username).select_related('quiz_id')
 
         for quiz in attempted_quiz_qs:
-            my_quizes["attempted"].append(model_to_dict(quiz) | model_to_dict(quiz.quiz_id))
+            my_quizes["attempted"].append({**model_to_dict(quiz), **model_to_dict(quiz.quiz_id)})
+            
         
         return JsonResponse(my_quizes)
