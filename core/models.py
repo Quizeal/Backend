@@ -15,6 +15,7 @@ from django.contrib.auth.models import User
 # QuizMarks - id(PK), QuizDetailsID(FK), userID(FK), marks(int), isActive(bool)
 
 class QuizDetails(models.Model):
+    #quiz_id = models.TextField(unique=True)
     quiz_name = models.TextField()
     username = models.CharField(max_length=150,null = True)
     start_time = models.TimeField()

@@ -75,6 +75,9 @@ class SubmitQuiz(APIView):
         if quiz_end_datetime<datetime.now(intz):
             return JsonResponse({"msg" : "Quiz has already ended"})
 
+        if QuizMarks.objects.filter(username = request.data["username"],quiz_id = quiz_id).exists():
+            return JsonResponse({"msg" : "Quiz has already been submitted by this user"})
+
         questions_qs = quiz_details_qs.questions.all().prefetch_related('options') 
         marks = 0
         total_marks = 0
@@ -124,7 +127,6 @@ class SubmitQuiz(APIView):
 
         quiz_marks = QuizMarks(marks = marks, total_marks = total_marks, quiz_id = quiz_details_qs, username = request.data["username"])
         quiz_marks.save()
-        
 
         return JsonResponse({"msg" : "Quiz has been submitted successfully!", "marks" : str(marks) + "/"+ str(total_marks)})
 
