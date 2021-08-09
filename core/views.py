@@ -8,6 +8,7 @@ import pytz
 import string
 import random
 
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -22,7 +23,7 @@ def generate_quiz_token():
         return res
 
 class CreateQuiz(APIView):
-
+    permission_classes = [IsAuthenticated]
     def post(self,request,*args,**kwargs):
 
         option_list = []
@@ -63,14 +64,15 @@ class CreateQuiz(APIView):
         if quizDetailsSerializer.is_valid():
             quizDetailsSerializer.save()
         else:
-            return Response(quizDetailsSerializer.errors)      
+            return Response(quizDetailsSerializer.errors)
 
         return Response(quizDetailsSerializer.data)
 
 
 class SubmitQuiz(APIView):
 
-    def post(self,request,quiz_token):
+    permission_classes = [IsAuthenticated]
+    def post(self,request,quiz_id):
 
         intz = pytz.timezone('Asia/Kolkata')
 
@@ -111,7 +113,7 @@ class SubmitQuiz(APIView):
             else:
                 return Response(quizAnsweredSerializer.errors)
 
-            option_list.append(response[i]["answer_name"])
+            option_list.append(response[i]["option_name"])
 
             if i==len(response)-1 or response[i]["question_id"] != response[i+1]["question_id"]:
 
@@ -146,7 +148,8 @@ class SubmitQuiz(APIView):
 
 class GetQuiz(APIView):
 
-    def get(self,request,quiz_token):
+    permission_classes = [IsAuthenticated]
+    def get(self,request,quiz_id):
 
         intz = pytz.timezone('Asia/Kolkata')
         quiz_details_qs = QuizDetails.objects.prefetch_related('questions').get(quiz_token = quiz_token)
@@ -180,7 +183,8 @@ class GetQuiz(APIView):
 
 class ViewQuiz(APIView):
 
-    def get(self,request,quiz_token):
+    permission_classes = [IsAuthenticated]
+    def get(self,request,quiz_id):
 
         quiz_details_qs = QuizDetails.objects.prefetch_related('questions').get(quiz_token = quiz_token)
         quiz_details = model_to_dict(quiz_details_qs)
@@ -203,7 +207,8 @@ class ViewQuiz(APIView):
 
 class QuizReport(APIView):
 
-    def post(self,request,quiz_token):   
+    permission_classes = [IsAuthenticated]
+    def post(self,request,quiz_id):   
         
         quiz_details_qs = QuizDetails.objects.prefetch_related('questions').get(quiz_token = quiz_token)
         quiz_id = quiz_details_qs.pk
@@ -241,7 +246,6 @@ class QuizReport(APIView):
 
                 del quiz_details["questions"][-1]["options"][-1]["is_active"]
 
-
         marks_list = []
         user_rank = 1
 
@@ -270,7 +274,7 @@ class QuizReport(APIView):
 
 
 class MyQuizes(APIView):
-
+    permission_classes = [IsAuthenticated]
     def get(self,request,username):
 
         my_quizes = {"created":[],"attempted":[]}
@@ -285,5 +289,4 @@ class MyQuizes(APIView):
         for quiz in attempted_quiz_qs:
             my_quizes["attempted"].append({**model_to_dict(quiz), **model_to_dict(quiz.quiz_id)})
             
-
         return JsonResponse(my_quizes)

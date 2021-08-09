@@ -44,6 +44,7 @@ class QuizOptions(models.Model):
 
 class QuizAnswered(models.Model):
     username = models.CharField(max_length=150)
+
     question_id = models.ForeignKey(Questions, related_name = 'answers', on_delete=models.CASCADE)
     quiz_id = models.ForeignKey(QuizDetails, on_delete=models.CASCADE)
     answer_name = models.TextField()
@@ -51,7 +52,7 @@ class QuizAnswered(models.Model):
 
 class QuizMarks(models.Model):
     quiz_id = models.ForeignKey(QuizDetails, on_delete=models.CASCADE, related_name='quiz')
-    username = models.CharField(max_length=150,null = True)
+    username = models.CharField(max_length=150)
     marks = models.IntegerField()
     total_marks = models.IntegerField()
     is_active = models.BooleanField(default=True)
