@@ -5,11 +5,22 @@ from django.forms.models import model_to_dict
 from datetime import datetime
 from datetime import timedelta
 import pytz
+import string
+import random
 
-
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework.permissions import IsAuthenticated
+
+def generate_quiz_token():
+        unique = False
+
+        while not unique:
+            res = ''.join(random.choices(string.ascii_uppercase + string.digits, k = 6))
+            if not QuizDetails.objects.filter(quiz_token = res).exists():
+                unique = True
+
+        return res
 
 class CreateQuiz(APIView):
     permission_classes = [IsAuthenticated]
@@ -17,6 +28,7 @@ class CreateQuiz(APIView):
 
         option_list = []
         question_list = []
+        total_marks = 0
 
         for question in request.data["questions"]:
 
@@ -32,6 +44,7 @@ class CreateQuiz(APIView):
 
             question["options"] = option_list
             questionsSerializer = serializers.QuestionsSerializer(data = question)
+            total_marks+=question["question_marks"]
                 
             if questionsSerializer.is_valid():
                 questionInstance = questionsSerializer.save()
@@ -44,12 +57,12 @@ class CreateQuiz(APIView):
             option_list.clear()
 
         request.data['questions'] = question_list
+        request.data['total_marks'] = total_marks
+        request.data['quiz_token'] = generate_quiz_token()
         quizDetailsSerializer = serializers.QuizDetailsSerializer(data = request.data)
-      
-        if quizDetailsSerializer.is_valid():
-            quizDetailsInstance = quizDetailsSerializer.save()
-            #return Response(quizDetailsSerializer.data)
 
+        if quizDetailsSerializer.is_valid():
+            quizDetailsSerializer.save()
         else:
             return Response(quizDetailsSerializer.errors)
 
@@ -57,12 +70,14 @@ class CreateQuiz(APIView):
 
 
 class SubmitQuiz(APIView):
+
     permission_classes = [IsAuthenticated]
-    def post(self,request,quiz_id):
+    def post(self,request,quiz_token):
 
         intz = pytz.timezone('Asia/Kolkata')
 
-        quiz_details_qs = QuizDetails.objects.get(pk = quiz_id)
+        quiz_details_qs = QuizDetails.objects.get(quiz_token = quiz_token)
+        quiz_id = quiz_details_qs.pk
 
         quiz_datetime = datetime.combine(quiz_details_qs.date, quiz_details_qs.start_time)
         quiz_datetime = intz.localize(quiz_datetime)
@@ -132,11 +147,12 @@ class SubmitQuiz(APIView):
 
 
 class GetQuiz(APIView):
+
     permission_classes = [IsAuthenticated]
-    def get(self,request,quiz_id):
+    def get(self,request,quiz_token):
 
         intz = pytz.timezone('Asia/Kolkata')
-        quiz_details_qs = QuizDetails.objects.prefetch_related('questions').get(id = quiz_id)
+        quiz_details_qs = QuizDetails.objects.prefetch_related('questions').get(quiz_token = quiz_token)
         quiz_datetime = datetime.combine(quiz_details_qs.date, quiz_details_qs.start_time)
         quiz_datetime = intz.localize(quiz_datetime)
         quiz_end_datetime = quiz_datetime + quiz_details_qs.duration
@@ -166,15 +182,16 @@ class GetQuiz(APIView):
         return JsonResponse(quiz_details)
 
 class ViewQuiz(APIView):
-    permission_classes = [IsAuthenticated]
-    def get(self,request,quiz_id):
 
-        quiz_details_qs = QuizDetails.objects.prefetch_related('questions').get(id = quiz_id)
+    permission_classes = [IsAuthenticated]
+    def get(self,request,quiz_token):
+
+        quiz_details_qs = QuizDetails.objects.prefetch_related('questions').get(quiz_token = quiz_token)
         quiz_details = model_to_dict(quiz_details_qs)
         quiz_details["questions"] = []
         questions_qs = quiz_details_qs.questions.all().prefetch_related('options')
 
-
+    
         for question in questions_qs:
             quiz_details["questions"].append(model_to_dict(question))
 
@@ -189,12 +206,14 @@ class ViewQuiz(APIView):
 
 
 class QuizReport(APIView):
-    permission_classes = [IsAuthenticated]
-    def post(self,request,quiz_id):   
-        
-        marks_qs = QuizMarks.objects.filter(quiz_id = quiz_id)
 
-        quiz_details_qs = QuizDetails.objects.prefetch_related('questions').get(id = quiz_id)
+    permission_classes = [IsAuthenticated]
+    def post(self,request,quiz_token):   
+        
+        quiz_details_qs = QuizDetails.objects.prefetch_related('questions').get(quiz_token = quiz_token)
+        quiz_id = quiz_details_qs.pk
+
+        marks_qs = QuizMarks.objects.filter(quiz_id = quiz_id)
         quiz_details = model_to_dict(quiz_details_qs)
         quiz_details["questions"] = []
         questions_qs = quiz_details_qs.questions.all().prefetch_related('options')

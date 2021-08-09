@@ -15,12 +15,14 @@ from django.contrib.auth.models import User
 # QuizMarks - id(PK), QuizDetailsID(FK), userID(FK), marks(int), isActive(bool)
 
 class QuizDetails(models.Model):
-    #quiz_id = models.TextField(unique=True)
+
+    quiz_token = models.CharField(max_length=6,unique=True)
     quiz_name = models.TextField()
     username = models.CharField(max_length=150)
     start_time = models.TimeField()
     duration = models.DurationField()
     date = models.DateField()
+    total_marks = models.IntegerField()
 
 class Questions(models.Model):
 
@@ -33,7 +35,7 @@ class Questions(models.Model):
     quiz_details = models.ForeignKey(QuizDetails, related_name = 'questions', on_delete=models.CASCADE,null=True)
     question_type = models.IntegerField(choices= QUESTION_CHOICES, default=1)
     question_marks = models.IntegerField()
-  
+
 class QuizOptions(models.Model):
     question_id = models.ForeignKey(Questions, related_name = 'options', on_delete=models.CASCADE,null=True)
     option_name = models.TextField()
@@ -42,7 +44,8 @@ class QuizOptions(models.Model):
 
 class QuizAnswered(models.Model):
     username = models.CharField(max_length=150)
-    question_id = models.ForeignKey(Questions, related_name = 'answers', on_delete=models.CASCADE,null=True)
+
+    question_id = models.ForeignKey(Questions, related_name = 'answers', on_delete=models.CASCADE)
     quiz_id = models.ForeignKey(QuizDetails, on_delete=models.CASCADE)
     answer_name = models.TextField()
     is_active = models.BooleanField(default=True)
@@ -51,7 +54,7 @@ class QuizMarks(models.Model):
     quiz_id = models.ForeignKey(QuizDetails, on_delete=models.CASCADE, related_name='quiz')
     username = models.CharField(max_length=150)
     marks = models.IntegerField()
-    total_marks = models.IntegerField(default=0)
+    total_marks = models.IntegerField()
     is_active = models.BooleanField(default=True)
 
     def __str__(self):
