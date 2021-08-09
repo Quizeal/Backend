@@ -11,18 +11,17 @@ import random
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-
-class CreateQuiz(APIView):
-
-    def generate_quiz_token(self):
+def generate_quiz_token():
         unique = False
 
         while not unique:
             res = ''.join(random.choices(string.ascii_uppercase + string.digits, k = 6))
-            if QuizDetails.objects.filter(quiz_token = res).exists():
+            if not QuizDetails.objects.filter(quiz_token = res).exists():
                 unique = True
 
         return res
+
+class CreateQuiz(APIView):
 
     def post(self,request,*args,**kwargs):
 
@@ -58,7 +57,7 @@ class CreateQuiz(APIView):
 
         request.data['questions'] = question_list
         request.data['total_marks'] = total_marks
-        request.data['quiz_token'] = self.generate_quiz_token()
+        request.data['quiz_token'] = generate_quiz_token()
         quizDetailsSerializer = serializers.QuizDetailsSerializer(data = request.data)
 
         if quizDetailsSerializer.is_valid():
