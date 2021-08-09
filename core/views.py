@@ -149,7 +149,7 @@ class SubmitQuiz(APIView):
 class GetQuiz(APIView):
 
     permission_classes = [IsAuthenticated]
-    def get(self,request,quiz_id):
+    def get(self,request,quiz_token):
 
         intz = pytz.timezone('Asia/Kolkata')
         quiz_details_qs = QuizDetails.objects.prefetch_related('questions').get(quiz_token = quiz_token)
@@ -184,7 +184,7 @@ class GetQuiz(APIView):
 class ViewQuiz(APIView):
 
     permission_classes = [IsAuthenticated]
-    def get(self,request,quiz_id):
+    def get(self,request,quiz_token):
 
         quiz_details_qs = QuizDetails.objects.prefetch_related('questions').get(quiz_token = quiz_token)
         quiz_details = model_to_dict(quiz_details_qs)
@@ -208,7 +208,7 @@ class ViewQuiz(APIView):
 class QuizReport(APIView):
 
     permission_classes = [IsAuthenticated]
-    def post(self,request,quiz_id):   
+    def post(self,request,quiz_token):   
         
         quiz_details_qs = QuizDetails.objects.prefetch_related('questions').get(quiz_token = quiz_token)
         quiz_id = quiz_details_qs.pk
