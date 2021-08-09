@@ -5,18 +5,30 @@ from django.forms.models import model_to_dict
 from datetime import datetime
 from datetime import timedelta
 import pytz
-
+import string
+import random
 
 from rest_framework.response import Response
 from rest_framework.views import APIView
-        
+
 
 class CreateQuiz(APIView):
+
+    def generate_quiz_token():
+        unique = False
+
+        while not unique:
+            res = ''.join(random.choices(string.ascii_uppercase + string.digits, k = 6))
+            if QuizDetails.objects.filter(quiz_token = res).exists():
+                unique = True
+
+        return res
 
     def post(self,request,*args,**kwargs):
 
         option_list = []
         question_list = []
+        total_marks = 0
 
         for question in request.data["questions"]:
 
@@ -32,6 +44,7 @@ class CreateQuiz(APIView):
 
             question["options"] = option_list
             questionsSerializer = serializers.QuestionsSerializer(data = question)
+            total_marks+=question["question_marks"]
                 
             if questionsSerializer.is_valid():
                 questionInstance = questionsSerializer.save()
@@ -44,12 +57,12 @@ class CreateQuiz(APIView):
             option_list.clear()
 
         request.data['questions'] = question_list
+        request.data['total_marks'] = total_marks
+        request.data['quiz_token'] = self.generate_quiz_token()
         quizDetailsSerializer = serializers.QuizDetailsSerializer(data = request.data)
       
         if quizDetailsSerializer.is_valid():
-            quizDetailsInstance = quizDetailsSerializer.save()
-            #return Response(quizDetailsSerializer.data)
-
+            quizDetailsSerializer.save()
         else:
             return Response(quizDetailsSerializer.errors)      
 
@@ -58,11 +71,12 @@ class CreateQuiz(APIView):
 
 class SubmitQuiz(APIView):
 
-    def post(self,request,quiz_id):
+    def post(self,request,quiz_token):
 
         intz = pytz.timezone('Asia/Kolkata')
 
-        quiz_details_qs = QuizDetails.objects.get(pk = quiz_id)
+        quiz_details_qs = QuizDetails.objects.get(quiz_token = quiz_token)
+        quiz_id = quiz_details_qs.pk
 
         quiz_datetime = datetime.combine(quiz_details_qs.date, quiz_details_qs.start_time)
         quiz_datetime = intz.localize(quiz_datetime)
@@ -133,10 +147,10 @@ class SubmitQuiz(APIView):
 
 class GetQuiz(APIView):
 
-    def get(self,request,quiz_id):
+    def get(self,request,quiz_token):
 
         intz = pytz.timezone('Asia/Kolkata')
-        quiz_details_qs = QuizDetails.objects.prefetch_related('questions').get(id = quiz_id)
+        quiz_details_qs = QuizDetails.objects.prefetch_related('questions').get(quiz_token = quiz_token)
         quiz_datetime = datetime.combine(quiz_details_qs.date, quiz_details_qs.start_time)
         quiz_datetime = intz.localize(quiz_datetime)
         quiz_end_datetime = quiz_datetime + quiz_details_qs.duration
@@ -167,9 +181,9 @@ class GetQuiz(APIView):
 
 class ViewQuiz(APIView):
 
-    def get(self,request,quiz_id):
+    def get(self,request,quiz_token):
 
-        quiz_details_qs = QuizDetails.objects.prefetch_related('questions').get(id = quiz_id)
+        quiz_details_qs = QuizDetails.objects.prefetch_related('questions').get(quiz_token = quiz_token)
         quiz_details = model_to_dict(quiz_details_qs)
         quiz_details["questions"] = []
         questions_qs = quiz_details_qs.questions.all().prefetch_related('options')
@@ -190,11 +204,12 @@ class ViewQuiz(APIView):
 
 class QuizReport(APIView):
 
-    def post(self,request,quiz_id):   
+    def post(self,request,quiz_token):   
         
-        marks_qs = QuizMarks.objects.filter(quiz_id = quiz_id)
+        quiz_details_qs = QuizDetails.objects.prefetch_related('questions').get(quiz_token = quiz_token)
+        quiz_id = quiz_details_qs.pk
 
-        quiz_details_qs = QuizDetails.objects.prefetch_related('questions').get(id = quiz_id)
+        marks_qs = QuizMarks.objects.filter(quiz_id = quiz_id)
         quiz_details = model_to_dict(quiz_details_qs)
         quiz_details["questions"] = []
         questions_qs = quiz_details_qs.questions.all().prefetch_related('options')
@@ -229,13 +244,13 @@ class QuizReport(APIView):
 
 
         marks_list = []
-        
         user_rank = 1
 
         for marks in marks_qs:
             marks_list.append(marks.marks)
             if marks.username == request.data["username"]:
                 user_marks = marks.marks
+                total_marks = marks.total_marks
 
         marks_list.sort(reverse=True)
 
@@ -250,6 +265,7 @@ class QuizReport(APIView):
         quiz_details["topper_marks"] = marks_list[0]
         quiz_details["user_marks"] = user_marks
         quiz_details["user_rank"] = user_rank
+        quiz_details["total_marks"] = total_marks
                   
         return JsonResponse(quiz_details)
 
@@ -270,5 +286,5 @@ class MyQuizes(APIView):
         for quiz in attempted_quiz_qs:
             my_quizes["attempted"].append({**model_to_dict(quiz), **model_to_dict(quiz.quiz_id)})
             
-        
+
         return JsonResponse(my_quizes)
