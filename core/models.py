@@ -32,12 +32,12 @@ class Questions(models.Model):
     ]
 
     question_name = models.TextField()
-    quiz_details = models.ForeignKey(QuizDetails, related_name = 'questions', on_delete=models.CASCADE)
+    quiz_details = models.ForeignKey(QuizDetails, related_name = 'questions', on_delete=models.CASCADE,null=True)
     question_type = models.IntegerField(choices= QUESTION_CHOICES, default=1)
     question_marks = models.IntegerField()
 
 class QuizOptions(models.Model):
-    question_id = models.ForeignKey(Questions, related_name = 'options', on_delete=models.CASCADE)
+    question_id = models.ForeignKey(Questions, related_name = 'options', on_delete=models.CASCADE,null=True)
     option_name = models.TextField()
     is_correct = models.BooleanField()
     is_active = models.BooleanField(default=True)

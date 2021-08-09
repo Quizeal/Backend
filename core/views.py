@@ -14,7 +14,7 @@ from rest_framework.views import APIView
 
 class CreateQuiz(APIView):
 
-    def generate_quiz_token():
+    def generate_quiz_token(self):
         unique = False
 
         while not unique:
@@ -60,7 +60,7 @@ class CreateQuiz(APIView):
         request.data['total_marks'] = total_marks
         request.data['quiz_token'] = self.generate_quiz_token()
         quizDetailsSerializer = serializers.QuizDetailsSerializer(data = request.data)
-      
+
         if quizDetailsSerializer.is_valid():
             quizDetailsSerializer.save()
         else:
@@ -188,7 +188,7 @@ class ViewQuiz(APIView):
         quiz_details["questions"] = []
         questions_qs = quiz_details_qs.questions.all().prefetch_related('options')
 
-
+    
         for question in questions_qs:
             quiz_details["questions"].append(model_to_dict(question))
 
