@@ -190,7 +190,7 @@ class ViewQuiz(APIView):
 
 class QuizReport(APIView):
 
-    def get(self,request,quiz_id):   
+    def post(self,request,quiz_id):   
         
         marks_qs = QuizMarks.objects.filter(quiz_id = quiz_id)
 
@@ -209,7 +209,7 @@ class QuizReport(APIView):
         if quiz_end_datetime>datetime.now(intz):
             return JsonResponse({"msg" : "Quiz has not yet ended"})
 
-        print(quiz_answered_qs.values_list())
+        # print(quiz_answered_qs.values_list())
 
         for question in questions_qs:
             quiz_details["questions"].append(model_to_dict(question))
