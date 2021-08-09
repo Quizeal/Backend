@@ -51,7 +51,7 @@ class CreateQuiz(APIView):
             #return Response(quizDetailsSerializer.data)
 
         else:
-            return Response(quizDetailsSerializer.errors)      
+            return Response(quizDetailsSerializer.errors)
 
         return Response(quizDetailsSerializer.data)
 
@@ -98,7 +98,7 @@ class SubmitQuiz(APIView):
             else:
                 return Response(quizAnsweredSerializer.errors)
 
-            option_list.append(response[i]["answer_name"])
+            option_list.append(response[i]["option_name"])
 
             if i==len(response)-1 or response[i]["question_id"] != response[i+1]["question_id"]:
 
@@ -227,15 +227,14 @@ class QuizReport(APIView):
 
                 del quiz_details["questions"][-1]["options"][-1]["is_active"]
 
-
         marks_list = []
-        
         user_rank = 1
 
         for marks in marks_qs:
             marks_list.append(marks.marks)
             if marks.username == request.data["username"]:
                 user_marks = marks.marks
+                total_marks = marks.total_marks
 
         marks_list.sort(reverse=True)
 
@@ -250,6 +249,7 @@ class QuizReport(APIView):
         quiz_details["topper_marks"] = marks_list[0]
         quiz_details["user_marks"] = user_marks
         quiz_details["user_rank"] = user_rank
+        quiz_details["total_marks"] = total_marks
                   
         return JsonResponse(quiz_details)
 
@@ -270,5 +270,4 @@ class MyQuizes(APIView):
         for quiz in attempted_quiz_qs:
             my_quizes["attempted"].append({**model_to_dict(quiz), **model_to_dict(quiz.quiz_id)})
             
-        
         return JsonResponse(my_quizes)
