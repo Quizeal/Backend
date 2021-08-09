@@ -9,10 +9,10 @@ import pytz
 
 from rest_framework.response import Response
 from rest_framework.views import APIView
-        
+from rest_framework.permissions import IsAuthenticated
 
 class CreateQuiz(APIView):
-
+    permission_classes = [IsAuthenticated]
     def post(self,request,*args,**kwargs):
 
         option_list = []
@@ -57,7 +57,7 @@ class CreateQuiz(APIView):
 
 
 class SubmitQuiz(APIView):
-
+    permission_classes = [IsAuthenticated]
     def post(self,request,quiz_id):
 
         intz = pytz.timezone('Asia/Kolkata')
@@ -132,7 +132,7 @@ class SubmitQuiz(APIView):
 
 
 class GetQuiz(APIView):
-
+    permission_classes = [IsAuthenticated]
     def get(self,request,quiz_id):
 
         intz = pytz.timezone('Asia/Kolkata')
@@ -166,7 +166,7 @@ class GetQuiz(APIView):
         return JsonResponse(quiz_details)
 
 class ViewQuiz(APIView):
-
+    permission_classes = [IsAuthenticated]
     def get(self,request,quiz_id):
 
         quiz_details_qs = QuizDetails.objects.prefetch_related('questions').get(id = quiz_id)
@@ -189,7 +189,7 @@ class ViewQuiz(APIView):
 
 
 class QuizReport(APIView):
-
+    permission_classes = [IsAuthenticated]
     def post(self,request,quiz_id):   
         
         marks_qs = QuizMarks.objects.filter(quiz_id = quiz_id)
@@ -255,7 +255,7 @@ class QuizReport(APIView):
 
 
 class MyQuizes(APIView):
-
+    permission_classes = [IsAuthenticated]
     def get(self,request,username):
 
         my_quizes = {"created":[],"attempted":[]}
