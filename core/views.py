@@ -72,7 +72,7 @@ class CreateQuiz(APIView):
 class SubmitQuiz(APIView):
 
     permission_classes = [IsAuthenticated]
-    def post(self,request,quiz_id):
+    def post(self,request,quiz_token):
 
         intz = pytz.timezone('Asia/Kolkata')
 
