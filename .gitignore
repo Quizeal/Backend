@@ -14,3 +14,4 @@ env.bak/
 venv.bak/
 migrations/*
 !migrations/__init__.py
+virtual

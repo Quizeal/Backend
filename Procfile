@@ -1,0 +1,1 @@
+web gunicorn Quizeal.wsgi:application --log-file -
