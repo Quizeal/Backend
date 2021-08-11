@@ -47,7 +47,7 @@ class QuizAnswered(models.Model):
 
     question_id = models.ForeignKey(Questions, related_name = 'answers', on_delete=models.CASCADE)
     quiz_id = models.ForeignKey(QuizDetails, on_delete=models.CASCADE)
-    answer_name = models.TextField()
+    option_name = models.TextField()
     is_active = models.BooleanField(default=True)
 
 class QuizMarks(models.Model):
