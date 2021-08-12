@@ -1,4 +1,5 @@
 from core.models import QuizAnswered, QuizDetails, QuizMarks, QuizOptions, Questions
+from django.contrib.auth.models import User
 from . import serializers
 from django.http import JsonResponse
 from django.forms.models import model_to_dict
@@ -40,7 +41,7 @@ class CreateQuiz(APIView):
                         option_list.append(optionInstance.pk)
 
                     else:
-                        return Response(optionSerializer.errors)
+                        return JsonResponse({"status": 500, "msg": "Internal error"})
 
             question["options"] = option_list
             questionsSerializer = serializers.QuestionsSerializer(data = question)
@@ -52,7 +53,7 @@ class CreateQuiz(APIView):
 
             else:
                 #print(questionsSerializer.quiz_id)
-                return Response(questionsSerializer.errors)
+                return JsonResponse({"status": 500, "msg": "Internal error"})
         
             option_list.clear()
 
@@ -64,9 +65,9 @@ class CreateQuiz(APIView):
         if quizDetailsSerializer.is_valid():
             quizDetailsSerializer.save()
         else:
-            return Response(quizDetailsSerializer.errors)
+            return JsonResponse({"status": 500, "msg": "Internal error"})
 
-        return Response(quizDetailsSerializer.data)
+        return JsonResponse({"status": 200, "msg": "Quiz created successfully", "data" : quizDetailsSerializer.data})
 
 
 class SubmitQuiz(APIView):
@@ -76,7 +77,12 @@ class SubmitQuiz(APIView):
 
         intz = pytz.timezone('Asia/Kolkata')
 
-        quiz_details_qs = QuizDetails.objects.get(quiz_token = quiz_token)
+        try:
+            quiz_details_qs = QuizDetails.objects.get(quiz_token = quiz_token)
+
+        except:
+            return JsonResponse({"status": 404, "msg" : "Quiz does not exist"})
+
         quiz_id = quiz_details_qs.pk
 
         quiz_datetime = datetime.combine(quiz_details_qs.date, quiz_details_qs.start_time)
@@ -88,10 +94,10 @@ class SubmitQuiz(APIView):
         print(datetime.now(intz))
 
         if quiz_end_datetime<datetime.now(intz):
-            return JsonResponse({"msg" : "Quiz has already ended"})
+            return JsonResponse({"status": 404,"msg" : "Quiz has already ended"})
 
         if QuizMarks.objects.filter(username = request.data["username"],quiz_id = quiz_id).exists():
-            return JsonResponse({"msg" : "Quiz has already been submitted by this user"})
+            return JsonResponse({"status": 404,"msg" : "Quiz has already been submitted by this user"})
 
         questions_qs = quiz_details_qs.questions.all().prefetch_related('options') 
         marks = 0
@@ -108,10 +114,10 @@ class SubmitQuiz(APIView):
  
             if quizAnsweredSerializer.is_valid():
                     quizAnsweredSerializer.save()
-                    #print(quizAnsweredInstance)
         
             else:
-                return Response(quizAnsweredSerializer.errors)
+                return JsonResponse({"status": 500, "msg" : "Internal error"})
+
 
             option_list.append(response[i]["option_name"])
 
@@ -143,7 +149,7 @@ class SubmitQuiz(APIView):
         quiz_marks = QuizMarks(marks = marks, total_marks = total_marks, quiz_id = quiz_details_qs, username = request.data["username"])
         quiz_marks.save()
 
-        return JsonResponse({"msg" : "Quiz has been submitted successfully!", "marks" : str(marks) + "/"+ str(total_marks)})
+        return JsonResponse({"status":200, "msg" : "Quiz has been submitted successfully!", "marks" : str(marks) + "/"+ str(total_marks)})
 
 
 class GetQuiz(APIView):
@@ -152,16 +158,22 @@ class GetQuiz(APIView):
     def get(self,request,quiz_token):
 
         intz = pytz.timezone('Asia/Kolkata')
-        quiz_details_qs = QuizDetails.objects.prefetch_related('questions').get(quiz_token = quiz_token)
+
+        try:
+            quiz_details_qs = QuizDetails.objects.prefetch_related('questions').get(quiz_token = quiz_token)
+
+        except:
+            return JsonResponse({"status": 404, "msg" : "Quiz does not exist"})
+
         quiz_datetime = datetime.combine(quiz_details_qs.date, quiz_details_qs.start_time)
         quiz_datetime = intz.localize(quiz_datetime)
         quiz_end_datetime = quiz_datetime + quiz_details_qs.duration
 
         if quiz_datetime > datetime.now(intz):
-            return JsonResponse({"msg" : "Quiz not started yet!"})
+            return JsonResponse({"status": 404,"msg" : "Quiz not started yet!"})
         
         if quiz_end_datetime < datetime.now(intz):
-            return JsonResponse({"msg" : "Quiz has already ended!"})
+            return JsonResponse({"status": 404,"msg" : "Quiz has already ended!"})
 
         quiz_details = model_to_dict(quiz_details_qs)
         quiz_details["questions"] = []
@@ -179,14 +191,19 @@ class GetQuiz(APIView):
                 del quiz_details["questions"][-1]["options"][-1]["is_correct"]
                 del quiz_details["questions"][-1]["options"][-1]["is_active"]
 
-        return JsonResponse(quiz_details)
+        return JsonResponse({"status": 200,"data" : quiz_details})
 
 class ViewQuiz(APIView):
 
     permission_classes = [IsAuthenticated]
     def get(self,request,quiz_token):
 
-        quiz_details_qs = QuizDetails.objects.prefetch_related('questions').get(quiz_token = quiz_token)
+        try:
+            quiz_details_qs = QuizDetails.objects.prefetch_related('questions').get(quiz_token = quiz_token)
+
+        except:
+            return JsonResponse({"status": 404, "msg" : "Quiz does not exist"})
+        
         quiz_details = model_to_dict(quiz_details_qs)
         quiz_details["questions"] = []
         questions_qs = quiz_details_qs.questions.all().prefetch_related('options')
@@ -202,7 +219,7 @@ class ViewQuiz(APIView):
                 quiz_details["questions"][-1]["options"].append(model_to_dict(option))
                 del quiz_details["questions"][-1]["options"][-1]["is_active"]
 
-        return JsonResponse(quiz_details)
+        return JsonResponse({"status": 200,"data" : quiz_details})
 
 
 class QuizReport(APIView):
@@ -210,10 +227,22 @@ class QuizReport(APIView):
     permission_classes = [IsAuthenticated]
     def post(self,request,quiz_token):   
         
-        quiz_details_qs = QuizDetails.objects.prefetch_related('questions').get(quiz_token = quiz_token)
-        quiz_id = quiz_details_qs.pk
+        try:
+            quiz_details_qs = QuizDetails.objects.prefetch_related('questions').get(quiz_token = quiz_token)
+        except:
+            return JsonResponse({"status": 404, "msg" : "Quiz does not exist"})
 
+        try:
+            User.objects.get(username = request.data["username"])
+        except:
+            return JsonResponse({"status": 404, "msg" : "user does not exist"})
+        
+        quiz_id = quiz_details_qs.pk
         marks_qs = QuizMarks.objects.filter(quiz_id = quiz_id)
+
+        if not marks_qs.filter(username = request.data["username"]).exists():
+            return JsonResponse({"status": 404, "msg" : "user has not attempted the quiz"})
+
         quiz_details = model_to_dict(quiz_details_qs)
         quiz_details["questions"] = []
         questions_qs = quiz_details_qs.questions.all().prefetch_related('options')
@@ -226,7 +255,7 @@ class QuizReport(APIView):
         quiz_end_datetime += timedelta(minutes=6)
 
         if quiz_end_datetime>datetime.now(intz):
-            return JsonResponse({"msg" : "Quiz has not yet ended"})
+            return JsonResponse({"status": 404,"msg" : "Quiz has not yet ended"})
 
         # print(quiz_answered_qs.values_list())
 
@@ -241,13 +270,15 @@ class QuizReport(APIView):
 
                 quiz_details["questions"][-1]["options"][-1]["is_marked"] = False
 
-                if quiz_answered_qs.filter(answer_name = option.option_name, question_id = question.id).exists():
+                if quiz_answered_qs.filter(option_name = option.option_name, question_id = question.id).exists():
                     quiz_details["questions"][-1]["options"][-1]["is_marked"] = True
 
                 del quiz_details["questions"][-1]["options"][-1]["is_active"]
 
         marks_list = []
         user_rank = 1
+        user_marks = 0
+        total_marks = 0
 
         for marks in marks_qs:
             marks_list.append(marks.marks)
@@ -269,14 +300,20 @@ class QuizReport(APIView):
         quiz_details["user_marks"] = user_marks
         quiz_details["user_rank"] = user_rank
         quiz_details["total_marks"] = total_marks
-                  
-        return JsonResponse(quiz_details)
+
+        return JsonResponse({"status": 200,"data" : quiz_details})
 
 
 class MyQuizes(APIView):
+
     permission_classes = [IsAuthenticated]
     def get(self,request,username):
 
+        try:
+            User.objects.get(username = username)
+        except:
+            return JsonResponse({"status": 404, "msg" : "user does not exist"})
+        
         my_quizes = {"created":[],"attempted":[]}
 
         created_quiz_qs = QuizDetails.objects.filter(username = username)
@@ -289,4 +326,4 @@ class MyQuizes(APIView):
         for quiz in attempted_quiz_qs:
             my_quizes["attempted"].append({**model_to_dict(quiz), **model_to_dict(quiz.quiz_id)})
             
-        return JsonResponse(my_quizes)
+        return JsonResponse({"status": 200,"data" : my_quizes})
