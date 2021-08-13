@@ -23,6 +23,10 @@ def generate_quiz_token():
 
         return res
 
+def custom_sort(dict):
+    return dict["marks"]
+
+
 class CreateQuiz(APIView):
     permission_classes = [IsAuthenticated]
     def post(self,request,*args,**kwargs):
@@ -99,7 +103,7 @@ class SubmitQuiz(APIView):
         if QuizMarks.objects.filter(username = request.data["username"],quiz_id = quiz_id).exists():
             return JsonResponse({"status": 404,"msg" : "Quiz has already been submitted by this user"})
 
-        questions_qs = quiz_details_qs.questions.all().prefetch_related('options') 
+        questions_qs = quiz_details_qs.questions.all().prefetch_related('options')
         marks = 0
         total_marks = 0
         option_list = []
@@ -114,7 +118,6 @@ class SubmitQuiz(APIView):
  
             if quizAnsweredSerializer.is_valid():
                     quizAnsweredSerializer.save()
-        
             else:
                 return JsonResponse({"status": 500, "msg" : quizAnsweredSerializer.errors})
 
@@ -149,7 +152,7 @@ class SubmitQuiz(APIView):
         quiz_marks = QuizMarks(marks = marks, total_marks = total_marks, quiz_id = quiz_details_qs, username = request.data["username"])
         quiz_marks.save()
 
-        return JsonResponse({"status":200, "msg" : "Quiz has been submitted successfully!", "marks" : str(marks) + "/"+ str(total_marks)})
+        return JsonResponse({"status":200, "msg" : "Quiz has been submitted successfully!", "marks" : str(marks) + "/"+ str(quiz_details_qs.total_marks)})
 
 
 class GetQuiz(APIView):
@@ -327,3 +330,48 @@ class MyQuizes(APIView):
             my_quizes["attempted"].append({**model_to_dict(quiz), **model_to_dict(quiz.quiz_id)})
             
         return JsonResponse({"status": 200,"data" : my_quizes})
+
+class QuizResult(APIView):
+
+    permission_classes = [IsAuthenticated]
+    def get(self,request,quiz_token):
+        
+        try:
+            quiz_details_qs = QuizDetails.objects.prefetch_related('questions').get(quiz_token = quiz_token)
+        except:
+            return JsonResponse({"status": 404, "msg" : "Quiz does not exist"})
+
+        try:
+            User.objects.get(username = request.data["username"])
+        except:
+            return JsonResponse({"status": 404, "msg" : "user does not exist"})
+
+        quiz_id = quiz_details_qs.pk
+        marks_qs = QuizMarks.objects.filter(quiz_id = quiz_id)
+        
+        quiz_result = model_to_dict(quiz_details_qs)
+        student_list = []
+
+        for marks in marks_qs:
+            student = {}
+            user = User.objects.get(username = marks.username)
+            student["name"] = user.first_name + " " + user.last_name
+            student["username"] = user.username
+            student["email"] = user.email
+            student["marks"] = marks.marks
+            student_list.append(student)
+
+        sorted(student_list, key = custom_sort,reverse=True)
+
+        if len(student_list):
+            student_list[0]["rank"] = 1
+            for i in range(1,len(student_list)):
+
+                if student_list[i]["marks"] == student_list[i-1]["marks"]:
+                    student_list[i]["rank"] = student_list[i-1]["rank"]
+                else:
+                    student_list[i]["rank"] = i+1
+
+        quiz_result["students"] = student_list
+
+        return JsonResponse({"status": 200,"data" : quiz_result})
