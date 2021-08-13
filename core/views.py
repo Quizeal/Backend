@@ -41,7 +41,7 @@ class CreateQuiz(APIView):
                         option_list.append(optionInstance.pk)
 
                     else:
-                        return JsonResponse({"status": 500, "msg": "Internal error"})
+                        return JsonResponse({"status": 500, "msg": optionSerializer.errors})
 
             question["options"] = option_list
             questionsSerializer = serializers.QuestionsSerializer(data = question)
@@ -53,7 +53,7 @@ class CreateQuiz(APIView):
 
             else:
                 #print(questionsSerializer.quiz_id)
-                return JsonResponse({"status": 500, "msg": "Internal error"})
+                return JsonResponse({"status": 500, "msg": questionsSerializer.errors})
         
             option_list.clear()
 
@@ -65,7 +65,7 @@ class CreateQuiz(APIView):
         if quizDetailsSerializer.is_valid():
             quizDetailsSerializer.save()
         else:
-            return JsonResponse({"status": 500, "msg": "Internal error"})
+            return JsonResponse({"status": 500, "msg": quizDetailsSerializer.errors})
 
         return JsonResponse({"status": 200, "msg": "Quiz created successfully", "data" : quizDetailsSerializer.data})
 
@@ -116,7 +116,7 @@ class SubmitQuiz(APIView):
                     quizAnsweredSerializer.save()
         
             else:
-                return JsonResponse({"status": 500, "msg" : "Internal error"})
+                return JsonResponse({"status": 500, "msg" : quizAnsweredSerializer.errors})
 
 
             option_list.append(response[i]["option_name"])
