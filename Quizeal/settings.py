@@ -14,12 +14,12 @@ from pathlib import Path
 import django_on_heroku
 import dj_database_url
 import os
+from datetime import timedelta
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-
-# Quick-start development settings - unsuitable for production
+from datetime import timedelta# Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/3.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
@@ -122,12 +122,18 @@ USE_TZ = True
 STATIC_URL = '/static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+CORS_ORIGIN_ALLOW_ALL = False
+CORS_ORIGIN_WHITELIST = (
+  'http://localhost:3000',
+) 
+
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ],
 }
-from datetime import timedelta
+
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
@@ -155,6 +161,8 @@ SIMPLE_JWT = {
     'SLIDING_TOKEN_LIFETIME': timedelta(minutes=5),
     'SLIDING_TOKEN_REFRESH_LIFETIME': timedelta(days=1),
 }
+
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATICFILES_ROOT = (os.path.join(BASE_DIR, 'staticfiles'),)
+
 django_on_heroku.settings(locals())
