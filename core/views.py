@@ -23,6 +23,10 @@ def generate_quiz_token():
 
         return res
 
+def custom_sort(dict):
+    return dict["marks"]
+
+
 class CreateQuiz(APIView):
     permission_classes = [IsAuthenticated]
     def post(self,request,*args,**kwargs):
@@ -327,3 +331,43 @@ class MyQuizes(APIView):
             my_quizes["attempted"].append({**model_to_dict(quiz), **model_to_dict(quiz.quiz_id)})
             
         return JsonResponse({"status": 200,"data" : my_quizes})
+
+class QuizResult(APIView):
+
+    permission_classes = [IsAuthenticated]
+    def get(self,request,quiz_token):
+        
+        try:
+            quiz_details_qs = QuizDetails.objects.prefetch_related('questions').get(quiz_token = quiz_token)
+        except:
+            return JsonResponse({"status": 404, "msg" : "Quiz does not exist"})
+
+        try:
+            User.objects.get(username = request.data["username"])
+        except:
+            return JsonResponse({"status": 404, "msg" : "user does not exist"})
+
+        quiz_id = quiz_details_qs.pk
+        marks_qs = QuizMarks.objects.filter(quiz_id = quiz_id)
+        
+        quiz_result = model_to_dict(quiz_details_qs)
+        student_list = []
+
+        for marks in marks_qs:
+            student = model_to_dict(User.objects.get(username = marks.username))
+            student["marks"] = marks.marks
+            student_list.append(student)
+
+        sorted(student_list, key = custom_sort,reverse=True)
+
+        student_list[0]["rank"] = 1
+        for i in range(1,len(student_list)-1):
+
+            if student_list[i]["marks"] == student_list[i-1]["marks"]:
+                student_list[i]["rank"] = student_list[i-1]["rank"]
+            else:
+                student_list[i]["rank"] = i+1
+
+        quiz_result["students"] = student_list
+
+        return JsonResponse({"status": 200,"data" : quiz_result})
