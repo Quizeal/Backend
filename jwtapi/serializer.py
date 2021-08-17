@@ -4,13 +4,14 @@ from django.contrib.auth.models import User
 class RegisterSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ('username','password','first_name', 'last_name','id', 'email')    
+        fields = ('email','password','username','first_name', 'last_name','id')    
 
-        def create(self, validated_data):
-            User.objects.create_user(validated_data['username'],password = validated_data['password'],first_name=validated_data['first_name'],last_name=validated_data['last_name'], email=validated_data['email'])
-
+    def validate_email(self,value):
+            if User.objects.filter(email=value).exists():
+                raise serializers.ValidationError("Email Already Exists,use another one")
+            return value
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
-        model = User
-        fields = ('username','password','first_name','last_name','id', 'email')
+        model = User 
+        fields = ('email','password','username','first_name','last_name','id')
