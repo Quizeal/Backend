@@ -163,8 +163,7 @@ class GetQuiz(APIView):
         intz = pytz.timezone('Asia/Kolkata')
 
         try:
-            quiz_details_qs = QuizDetails.objects.prefetch_related('questions').get(quiz_token = quiz_token)
-
+            quiz_details_qs = QuizDetails.objects.prefetch_related('questions').get(quiz_token = quiz_token,is_active=True)
         except:
             return JsonResponse({"status": 404, "msg" : "Quiz does not exist"})
 
@@ -319,12 +318,12 @@ class MyQuizes(APIView):
         
         my_quizes = {"created":[],"attempted":[]}
 
-        created_quiz_qs = QuizDetails.objects.filter(username = username)
+        created_quiz_qs = QuizDetails.objects.filter(username = username,is_active=True)
 
         for quiz in created_quiz_qs:
             my_quizes["created"].append(model_to_dict(quiz))
 
-        attempted_quiz_qs = QuizMarks.objects.filter(username = username).select_related('quiz_id')
+        attempted_quiz_qs = QuizMarks.objects.filter(username = username,is_active=True).select_related('quiz_id')
 
         for quiz in attempted_quiz_qs:
             my_quizes["attempted"].append({**model_to_dict(quiz), **model_to_dict(quiz.quiz_id)})
@@ -375,3 +374,29 @@ class QuizResult(APIView):
         quiz_result["students"] = student_list
 
         return JsonResponse({"status": 200,"data" : quiz_result})
+
+class deleteCreated(APIView):
+    permission_classes = [IsAuthenticated]
+    def post(self,request,quiz_token):   
+        try:
+            qs=QuizDetails.objects.get(quiz_token = quiz_token)
+        except:
+            return JsonResponse({"status": 404, "msg" : "Quiz does not exist"})
+        
+        qs.is_active=False
+        qs.save()
+        # print(QuizDetails.objects.get(quiz_token = quiz_token).is_active)
+        # quiz_details_qs.delete() ##hard delete
+        return JsonResponse({"status": 200,"data" : "Quiz Deleted Successfully"})
+
+class deleteAttempted(APIView):
+    permission_classes = [IsAuthenticated]
+    def post(self,request,quiz_token):   
+        try:
+            qs=QuizMarks.objects.get(quiz_token = quiz_token)
+        except:
+            return JsonResponse({"status": 404, "msg" : "Quiz does not exist"})
+        
+        qs.is_active=False
+        qs.save()
+        return JsonResponse({"status": 200,"data" : "Quiz Deleted Successfully"})
