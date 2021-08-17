@@ -23,6 +23,7 @@ class QuizDetails(models.Model):
     duration = models.DurationField()
     date = models.DateField()
     total_marks = models.IntegerField()
+    is_active= models.BooleanField(default=True)
 
 class Questions(models.Model):
 
@@ -47,7 +48,9 @@ class QuizAnswered(models.Model):
 
     question_id = models.ForeignKey(Questions, related_name = 'answers', on_delete=models.CASCADE)
     quiz_id = models.ForeignKey(QuizDetails, on_delete=models.CASCADE)
+    option_name = models.ForeignKey(QuizDetails, on_delete=models.CASCADE)
     option_name = models.TextField()
+    is_active = models.BooleanField(default=True)
     is_active = models.BooleanField(default=True)
 
 class QuizMarks(models.Model):
@@ -56,6 +59,6 @@ class QuizMarks(models.Model):
     marks = models.IntegerField()
     total_marks = models.IntegerField()
     is_active = models.BooleanField(default=True)
-
+    # quiz_active= models.BooleanField(default=True)
     def __str__(self):
         return str(self.marks)
