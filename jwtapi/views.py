@@ -24,6 +24,7 @@ class RegisterApi(generics.GenericAPIView):
         user = serializer.save()
 
         return Response({
+            "status" : 200,
             "user": UserSerializer(user,context=self.get_serializer_context()).data,
             "message": "Registered Successfully. Login to Quizeal",
         })
@@ -54,7 +55,7 @@ class LoadView(APIView):
                 "data": {
                 "token_type": decode["token_type"],
                 "user": model_to_dict(user)
-                },
+                }
             }
             return Response(res, status=200)
         except:
@@ -63,3 +64,19 @@ class LoadView(APIView):
                 "error": "Bad Request"
             }
             return Response(res, status=400)
+
+class ChangePassword(APIView):
+
+    def post(self,request,*args,**kwargs):
+
+        try:
+            decode = jwt.decode(request.data['token'], SIMPLE_JWT['SIGNING_KEY'], algorithms=[SIMPLE_JWT['ALGORITHM']])
+            user = User.objects.get(id=decode['user_id'])
+            
+            user.password = make_password(request.data['password'], None, 'md5')
+            user.save()
+            return Response({"msg": "Password changed successfully!"}, status = 200)
+
+        except:
+            return Response({"msg" : "Bad request"}, status = 400)
+            
