@@ -59,6 +59,7 @@ class CustomJWTSerializer(TokenObtainPairSerializer):
 class LoadUserView(APIView):
     def post(self, request, *args, **kwargs):
         try:
+
             decode = jwt.decode(
                 request.data["token"],
                 SIMPLE_JWT["SIGNING_KEY"],
