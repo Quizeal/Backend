@@ -38,7 +38,6 @@ class VerifyToken:
     """
 
     def has_permission(self, request, view):
-        print(request.headers)
         token = request.headers["Authorization"].split(" ")[1]
         decode = jwt.decode(
             token,
@@ -91,7 +90,6 @@ class CreateQuiz(APIView):
                 question_list.append(questionInstance.pk)
 
             else:
-                # print(questionsSerializer.quiz_id)
                 return Response(
                     {"status": 500, "detail": questionsSerializer.errors}, status=500
                 )
@@ -145,9 +143,6 @@ class SubmitQuiz(APIView):
         quiz_end_datetime = quiz_datetime + quiz_details_qs.duration
         quiz_end_datetime += timedelta(minutes=6)
 
-        print(quiz_end_datetime)
-        print(datetime.now(intz))
-
         if quiz_end_datetime < datetime.now(intz):
             return Response(
                 {"status": 404, "detail": "Quiz has already ended"}, status=404
@@ -198,8 +193,6 @@ class SubmitQuiz(APIView):
 
                 total_marks += question.question_marks
                 correct_ans = True
-
-                print(option_list)
 
                 if len(option_list) != len(options_qs):
                     correct_ans = False
@@ -308,6 +301,11 @@ class ViewQuiz(APIView):
                 {"status": 404, "detail": "Quiz does not exist"}, status=404
             )
 
+        if not quiz_details_qs.is_active:
+            return Response(
+                {"status": 404, "detail": "Quiz does not exist"}, status=404
+            )
+
         if quiz_details_qs.username != username:
             return Response({"status": 401, "detail": "Not Authorized"}, status=401)
 
@@ -350,6 +348,11 @@ class QuizReport(APIView):
                 {"status": 404, "detail": "User does not exist"}, status=404
             )
 
+        if not quiz_details_qs.is_active:
+            return Response(
+                {"status": 404, "detail": "Quiz does not exist"}, status=404
+            )
+
         quiz_id = quiz_details_qs.pk
         marks_qs = QuizMarks.objects.filter(quiz_id=quiz_id)
 
@@ -375,8 +378,6 @@ class QuizReport(APIView):
             return Response(
                 {"status": 404, "detail": "Quiz has not yet ended"}, status=404
             )
-
-        print(quiz_answered_qs.values_list())
 
         for question in questions_qs:
             quiz_details["questions"].append(model_to_dict(question))
@@ -483,6 +484,11 @@ class QuizResult(APIView):
                 {"status": 404, "detail": "Quiz does not exist"}, status=404
             )
 
+        if not quiz_details_qs.is_active:
+            return Response(
+                {"status": 404, "detail": "Quiz does not exist"}, status=404
+            )
+
         try:
             User.objects.get(username=username)
         except:
@@ -524,30 +530,42 @@ class QuizResult(APIView):
 class deleteCreated(APIView):
     permission_classes = [IsAuthenticated, VerifyToken]
 
-    def post(self, request, quiz_token, username):
+    def get(self, request, quiz_token, username):
         try:
-            qs = QuizDetails.objects.get(quiz_token=quiz_token)
+            qs = QuizDetails.objects.get(quiz_token=quiz_token, username=username)
         except:
+            return Response(
+                {"status": 404, "detail": "Quiz does not exist"}, status=404
+            )
+
+        if not qs.is_active:
             return Response(
                 {"status": 404, "detail": "Quiz does not exist"}, status=404
             )
 
         qs.is_active = False
         qs.save()
-        # print(QuizDetails.objects.get(quiz_token = quiz_token).is_active)
-        # quiz_details_qs.delete() ##hard delete
         return Response({"status": 200, "data": "Quiz Deleted Successfully"})
 
 
 class deleteAttempted(APIView):
     permission_classes = [IsAuthenticated, VerifyToken]
 
-    def post(self, request, quiz_token, username):
+    def get(self, request, username, quiz_token):
         try:
             qs = QuizMarks.objects.get(quiz_token=quiz_token, username=username)
         except:
             return JsonResponse({"status": 404, "detail": "Invalid credentials"})
 
+        if not qs.is_active:
+            return Response(
+                {"status": 404, "detail": "Quiz does not exist"}, status=404
+            )
+
         qs.is_active = False
         qs.save()
         return JsonResponse({"status": 200, "data": "Quiz Deleted Successfully"})
+
+
+# todo
+# Currently delete attempted quiz behavious is NOT OK.
