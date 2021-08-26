@@ -417,9 +417,13 @@ class QuizReport(APIView):
 
         top_10_percentile_list = marks_list[: len(marks_list) // 10]
 
-        quiz_details["top_10_percentile"] = sum(top_10_percentile_list) / len(
-            top_10_percentile_list
-        )
+        if len(top_10_percentile_list) > 0:
+            quiz_details["top_10_percentile"] = sum(top_10_percentile_list) / len(
+                top_10_percentile_list
+            )
+        else:
+            quiz_details["top_10_percentile"] = 0
+
         quiz_details["average"] = sum(marks_list) / len(marks_list)
         quiz_details["total_students"] = len(marks_list)
         quiz_details["topper_marks"] = marks_list[0]
