@@ -13,6 +13,9 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+import jwt
+from Quizeal.settings import SIMPLE_JWT
+
 
 def generate_quiz_token():
     unique = False
@@ -29,11 +32,38 @@ def custom_sort(dict):
     return dict["marks"]
 
 
+class VerifyToken:
+    """
+    Verify Token
+    """
+
+    def has_permission(self, request, view):
+        print(request.headers)
+        token = request.headers["Authorization"].split(" ")[1]
+        decode = jwt.decode(
+            token,
+            SIMPLE_JWT["SIGNING_KEY"],
+            algorithms=[SIMPLE_JWT["ALGORITHM"]],
+        )
+
+        if not decode:
+            return False
+
+        user = User.objects.get(id=decode["user_id"])
+
+        if not user:
+            return False
+
+        if user.username != view.kwargs.get("username"):
+            return False
+
+        return True
+
+
 class CreateQuiz(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, VerifyToken]
 
-    def post(self, request, *args, **kwargs):
-
+    def post(self, request, username):
         option_list = []
         question_list = []
         total_marks = 0
@@ -68,6 +98,7 @@ class CreateQuiz(APIView):
 
             option_list.clear()
 
+        request.data["username"] = username
         request.data["questions"] = question_list
         request.data["total_marks"] = total_marks
         request.data["quiz_token"] = generate_quiz_token()
@@ -91,7 +122,7 @@ class CreateQuiz(APIView):
 
 class SubmitQuiz(APIView):
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, VerifyToken]
 
     def post(self, request, username, quiz_token):
 
@@ -201,7 +232,7 @@ class SubmitQuiz(APIView):
 
 class GetQuiz(APIView):
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, VerifyToken]
 
     def get(self, request, username, quiz_token):
 
@@ -263,7 +294,7 @@ class GetQuiz(APIView):
 
 class ViewQuiz(APIView):
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, VerifyToken]
 
     def get(self, request, username, quiz_token):
 
@@ -299,7 +330,7 @@ class ViewQuiz(APIView):
 
 class QuizReport(APIView):
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, VerifyToken]
 
     def get(self, request, username, quiz_token):
 
@@ -396,7 +427,7 @@ class QuizReport(APIView):
 
 class MyQuizes(APIView):
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, VerifyToken]
 
     def get(self, request, username):
 

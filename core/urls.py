@@ -12,7 +12,7 @@ from core.views import (
 )
 
 urlpatterns = [
-    path("create-quiz/", CreateQuiz.as_view(), name="Create Quiz"),
+    path("create-quiz/<str:username>", CreateQuiz.as_view(), name="Create Quiz"),
     path(
         "submit-quiz/<str:username>/<str:quiz_token>",
         SubmitQuiz.as_view(),
