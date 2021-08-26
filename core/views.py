@@ -461,7 +461,7 @@ class MyQuizes(APIView):
 
 class QuizResult(APIView):
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, VerifyToken]
 
     def get(self, request, username, quiz_token):
 
@@ -513,9 +513,9 @@ class QuizResult(APIView):
 
 
 class deleteCreated(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, VerifyToken]
 
-    def post(self, request, quiz_token):
+    def post(self, request, quiz_token,username):
         try:
             qs = QuizDetails.objects.get(quiz_token=quiz_token)
         except:
@@ -531,13 +531,13 @@ class deleteCreated(APIView):
 
 
 class deleteAttempted(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, VerifyToken]
 
-    def post(self, request, quiz_token):
+    def post(self, request, quiz_token, username):
         try:
-            qs = QuizMarks.objects.get(quiz_token=quiz_token)
+            qs = QuizMarks.objects.get(quiz_token=quiz_token, username = username)
         except:
-            return JsonResponse({"status": 404, "detail": "Quiz does not exist"})
+            return JsonResponse({"status": 404, "detail": "Invalid credentials"})
 
         qs.is_active = False
         qs.save()

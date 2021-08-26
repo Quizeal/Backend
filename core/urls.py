@@ -38,9 +38,9 @@ urlpatterns = [
         name="Quiz Result",
     ),
     path(
-        "delete-created/<str:quiz_token>",
+        "delete-created/<str:username>/<str:quiz_token>",
         deleteCreated.as_view(),
         name="Delete Created Quiz",
     ),
-    path("delete-attempted/<str:quiz_token>", deleteAttempted.as_view()),
+    path("delete-attempted/<str:username>/<str:quiz_token>", deleteAttempted.as_view()),
 ]
