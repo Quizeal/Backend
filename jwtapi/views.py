@@ -9,6 +9,7 @@ from django.contrib.auth.hashers import make_password
 from rest_framework.views import APIView
 from django.forms.models import model_to_dict
 from django.contrib.auth.hashers import check_password
+from rest_framework_simplejwt.tokens import RefreshToken
 
 
 import jwt
@@ -122,5 +123,15 @@ class ChangePassword(APIView):
 
         except:
             return Response(
-                {"status": 500, "detail": "Internal Server Error"}, status=500
-            )
+                {"status": 500, "detail": "Internal Server Error"}, status=500)
+
+class Logout(APIView):
+    def post(self, request, *args, **kwargs):
+
+        try:
+            token = RefreshToken(request.data["refreshToken"])
+            token.blacklist()
+        except:
+            return Response({"status": 401, "detail": "invalid token"},status = 401)
+
+        return Response({"status": 200, "detail": "succesfully logged out!"},status = 200)
