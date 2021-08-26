@@ -93,7 +93,7 @@ class SubmitQuiz(APIView):
 
     permission_classes = [IsAuthenticated]
 
-    def post(self, request, quiz_token):
+    def post(self, request, username, quiz_token):
 
         intz = pytz.timezone("Asia/Kolkata")
 
@@ -122,9 +122,7 @@ class SubmitQuiz(APIView):
                 {"status": 404, "detail": "Quiz has already ended"}, status=404
             )
 
-        if QuizMarks.objects.filter(
-            username=request.data["username"], quiz_id=quiz_id
-        ).exists():
+        if QuizMarks.objects.filter(username=username, quiz_id=quiz_id).exists():
             return Response(
                 {
                     "status": 404,
@@ -143,7 +141,7 @@ class SubmitQuiz(APIView):
         for i in range(len(response)):
 
             response[i]["quiz_id"] = quiz_id
-            response[i]["username"] = request.data["username"]
+            response[i]["username"] = username
             quizAnsweredSerializer = serializers.QuizAnsweredSerializer(
                 data=response[i]
             )
@@ -188,7 +186,7 @@ class SubmitQuiz(APIView):
             marks=marks,
             total_marks=total_marks,
             quiz_id=quiz_details_qs,
-            username=request.data["username"],
+            username=username,
         )
         quiz_marks.save()
 
@@ -205,7 +203,7 @@ class GetQuiz(APIView):
 
     permission_classes = [IsAuthenticated]
 
-    def get(self, request, quiz_token):
+    def get(self, request, username, quiz_token):
 
         intz = pytz.timezone("Asia/Kolkata")
 
@@ -216,6 +214,17 @@ class GetQuiz(APIView):
         except:
             return Response(
                 {"status": 404, "detail": "Quiz does not exist"}, status=404
+            )
+
+        quiz_id = quiz_details_qs.pk
+
+        if QuizMarks.objects.filter(username=username, quiz_id=quiz_id).exists():
+            return Response(
+                {
+                    "status": 404,
+                    "detail": "Quiz has already been submitted by this user",
+                },
+                status=404,
             )
 
         quiz_datetime = datetime.combine(
@@ -256,7 +265,7 @@ class ViewQuiz(APIView):
 
     permission_classes = [IsAuthenticated]
 
-    def get(self, request, quiz_token):
+    def get(self, request, username, quiz_token):
 
         try:
             quiz_details_qs = QuizDetails.objects.prefetch_related("questions").get(
@@ -267,6 +276,9 @@ class ViewQuiz(APIView):
             return Response(
                 {"status": 404, "detail": "Quiz does not exist"}, status=404
             )
+
+        if quiz_details_qs.username != username:
+            return Response({"status": 401, "detail": "Not Authorized"}, status=401)
 
         quiz_details = model_to_dict(quiz_details_qs)
         quiz_details["questions"] = []
@@ -289,7 +301,7 @@ class QuizReport(APIView):
 
     permission_classes = [IsAuthenticated]
 
-    def post(self, request, quiz_token):
+    def post(self, request, username, quiz_token):
 
         try:
             quiz_details_qs = QuizDetails.objects.prefetch_related("questions").get(
@@ -301,18 +313,18 @@ class QuizReport(APIView):
             )
 
         try:
-            User.objects.get(username=request.data["username"])
+            User.objects.get(username=username)
         except:
             return Response(
-                {"status": 404, "detail": "user does not exist"}, status=404
+                {"status": 404, "detail": "User does not exist"}, status=404
             )
 
         quiz_id = quiz_details_qs.pk
         marks_qs = QuizMarks.objects.filter(quiz_id=quiz_id)
 
-        if not marks_qs.filter(username=request.data["username"]).exists():
+        if not marks_qs.filter(username=username).exists():
             return Response(
-                {"status": 404, "detail": "user has not attempted the quiz"}, status=404
+                {"status": 404, "detail": "User has not attempted the quiz"}, status=404
             )
 
         quiz_details = model_to_dict(quiz_details_qs)
@@ -328,12 +340,12 @@ class QuizReport(APIView):
         quiz_end_datetime = quiz_datetime + quiz_details_qs.duration
         quiz_end_datetime += timedelta(minutes=6)
 
-        # if quiz_end_datetime > datetime.now(intz):
-        #     return Response(
-        #         {"status": 404, "detail": "Quiz has not yet ended"}, status=404
-        #     )
+        if quiz_end_datetime > datetime.now(intz):
+            return Response(
+                {"status": 404, "detail": "Quiz has not yet ended"}, status=404
+            )
 
-        # print(quiz_answered_qs.values_list())
+        print(quiz_answered_qs.values_list())
 
         for question in questions_qs:
             quiz_details["questions"].append(model_to_dict(question))
@@ -360,7 +372,7 @@ class QuizReport(APIView):
 
         for marks in marks_qs:
             marks_list.append(marks.marks)
-            if marks.username == request.data["username"]:
+            if marks.username == username:
                 user_marks = marks.marks
                 total_marks = marks.total_marks
 
@@ -392,7 +404,7 @@ class MyQuizes(APIView):
             User.objects.get(username=username)
         except:
             return Response(
-                {"status": 404, "detail": "user does not exist"}, status=404
+                {"status": 404, "detail": "User does not exist"}, status=404
             )
 
         my_quizes = {"created": [], "attempted": []}
@@ -420,19 +432,23 @@ class QuizResult(APIView):
 
     permission_classes = [IsAuthenticated]
 
-    def get(self, request, quiz_token):
+    def get(self, request, username, quiz_token):
 
         try:
             quiz_details_qs = QuizDetails.objects.prefetch_related("questions").get(
                 quiz_token=quiz_token
             )
         except:
-            return JsonResponse({"status": 404, "detail": "Quiz does not exist"})
+            return Response(
+                {"status": 404, "detail": "Quiz does not exist"}, status=404
+            )
 
         try:
-            User.objects.get(username=request.data["username"])
+            User.objects.get(username=username)
         except:
-            return JsonResponse({"status": 404, "detail": "user does not exist"})
+            return Response(
+                {"status": 404, "detail": "user does not exist"}, status=404
+            )
 
         quiz_id = quiz_details_qs.pk
         marks_qs = QuizMarks.objects.filter(quiz_id=quiz_id)
@@ -462,7 +478,7 @@ class QuizResult(APIView):
 
         quiz_result["students"] = student_list
 
-        return JsonResponse({"status": 200, "data": quiz_result})
+        return Response({"status": 200, "data": quiz_result})
 
 
 class deleteCreated(APIView):
@@ -472,13 +488,15 @@ class deleteCreated(APIView):
         try:
             qs = QuizDetails.objects.get(quiz_token=quiz_token)
         except:
-            return JsonResponse({"status": 404, "detail": "Quiz does not exist"})
+            return Response(
+                {"status": 404, "detail": "Quiz does not exist"}, status=404
+            )
 
         qs.is_active = False
         qs.save()
         # print(QuizDetails.objects.get(quiz_token = quiz_token).is_active)
         # quiz_details_qs.delete() ##hard delete
-        return JsonResponse({"status": 200, "data": "Quiz Deleted Successfully"})
+        return Response({"status": 200, "data": "Quiz Deleted Successfully"})
 
 
 class deleteAttempted(APIView):
