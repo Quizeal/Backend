@@ -415,6 +415,11 @@ class QuizReport(APIView):
             else:
                 break
 
+        top_10_percentile_list = marks_list[: len(marks_list) // 10]
+
+        quiz_details["top_10_percentile"] = sum(top_10_percentile_list) / len(
+            top_10_percentile_list
+        )
         quiz_details["average"] = sum(marks_list) / len(marks_list)
         quiz_details["total_students"] = len(marks_list)
         quiz_details["topper_marks"] = marks_list[0]
@@ -515,7 +520,7 @@ class QuizResult(APIView):
 class deleteCreated(APIView):
     permission_classes = [IsAuthenticated, VerifyToken]
 
-    def post(self, request, quiz_token,username):
+    def post(self, request, quiz_token, username):
         try:
             qs = QuizDetails.objects.get(quiz_token=quiz_token)
         except:
@@ -535,7 +540,7 @@ class deleteAttempted(APIView):
 
     def post(self, request, quiz_token, username):
         try:
-            qs = QuizMarks.objects.get(quiz_token=quiz_token, username = username)
+            qs = QuizMarks.objects.get(quiz_token=quiz_token, username=username)
         except:
             return JsonResponse({"status": 404, "detail": "Invalid credentials"})
 
