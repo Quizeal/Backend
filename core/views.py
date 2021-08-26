@@ -301,7 +301,7 @@ class QuizReport(APIView):
 
     permission_classes = [IsAuthenticated]
 
-    def post(self, request, username, quiz_token):
+    def get(self, request, username, quiz_token):
 
         try:
             quiz_details_qs = QuizDetails.objects.prefetch_related("questions").get(
