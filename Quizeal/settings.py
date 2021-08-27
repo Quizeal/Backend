@@ -31,7 +31,7 @@ SECRET_KEY = "django-insecure-@gon5=x)_93sa$gn@)8o667t8t7*_)p1h*kp^+$9^$0nv*fbl&
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
-ALLOWED_HOSTS = ["*"]
+ALLOWED_HOSTS = ["https://frontend-theta-lake.vercel.app/"]
 
 
 # Application definition
@@ -120,11 +120,7 @@ USE_TZ = True
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-CORS_ORIGIN_ALLOW_ALL = False
-CORS_ORIGIN_WHITELIST = (
-    "http://localhost:3000",
-    "https://frontend-theta-lake.vercel.app",
-)
+CORS_ORIGIN_ALLOW_ALL = True
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
