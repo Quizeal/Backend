@@ -31,7 +31,7 @@ SECRET_KEY = "django-insecure-@gon5=x)_93sa$gn@)8o667t8t7*_)p1h*kp^+$9^$0nv*fbl&
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
-ALLOWED_HOSTS = ["https://frontend-theta-lake.vercel.app/"]
+ALLOWED_HOSTS = ["*"]
 
 
 # Application definition
