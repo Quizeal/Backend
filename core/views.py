@@ -534,10 +534,14 @@ class deleteCreated(APIView):
         try:
             qs = QuizDetails.objects.get(quiz_token=quiz_token, username=username)
         except:
-            return Response({"status": 404, "detail": "Quiz does not exist"}, status=404)
+            return Response(
+                {"status": 404, "detail": "Quiz does not exist"}, status=404
+            )
 
         if not qs.is_active:
-            return Response({"status": 404, "detail": "Quiz does not exist"}, status=404)
+            return Response(
+                {"status": 404, "detail": "Quiz does not exist"}, status=404
+            )
 
         qs.is_active = False
         qs.save()
@@ -550,18 +554,22 @@ class deleteAttempted(APIView):
     def get(self, request, username, quiz_token):
 
         try:
-            quiz_qs = QuizDetails.objects.get(quiz_token = quiz_token)
+            quiz_qs = QuizDetails.objects.get(quiz_token=quiz_token)
             quizmarks_qs = QuizMarks.objects.get(quiz_id=quiz_qs.id, username=username)
 
         except:
-            return JsonResponse({"status": 404, "detail": "Invalid credentials"})
+            return Response(
+                {"status": 404, "detail": "Invalid credentials"}, status=404
+            )
 
         if not quizmarks_qs.is_active:
-            return Response({"status": 404, "detail": "Quiz does not exist"}, status=404)
+            return Response(
+                {"status": 404, "detail": "Quiz does not exist"}, status=404
+            )
 
         quizmarks_qs.is_active = False
         quizmarks_qs.save()
-        return JsonResponse({"status": 200, "data": "Quiz Deleted Successfully"})
+        return Response({"status": 200, "data": "Quiz Deleted Successfully"})
 
 
 # todo
