@@ -505,6 +505,7 @@ class QuizResult(APIView):
         for marks in marks_qs:
             student = {}
             user = User.objects.get(username=marks.username)
+            student["id"] = user.id
             student["name"] = user.first_name + " " + user.last_name
             student["username"] = user.username
             student["email"] = user.email
